@@ -10,7 +10,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { useEffect, useState } from "react";
+import {
+  memo,
+  useDeferredValue,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 interface Links {
   pixiv: string;
@@ -37,6 +44,47 @@ type SortOption = "name" | "-name" | "favorited" | "-favorited";
 const AUTHORS_URL =
   "https://reddeaddepresso.github.io/kk-author-scraper/indices/author.json";
 
+const PAGE_SIZE = 60;
+
+// Memoized so unchanged cards don't re-render; banner is a real lazy <img>
+const AuthorCard = memo(function AuthorCard({
+  name,
+  isRecommended,
+  favorited,
+  icon,
+  banner,
+}: Pick<Author, "name" | "isRecommended" | "favorited" | "icon" | "banner">) {
+  return (
+    <Card className="relative overflow-hidden">
+      <img
+        src={banner}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        className="absolute inset-0 size-full object-cover"
+      />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/80" />
+      <CardContent className="relative flex gap-4 items-center">
+        <Avatar className="size-20">
+          <AvatarImage src={icon} loading="lazy" />
+          <AvatarFallback>{name.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <div className="flex flex-col">
+          <CardTitle className="font-bold text-lg">
+            {isRecommended ? `${name} 👑` : name}
+          </CardTitle>
+          {favorited !== undefined && (
+            <span>
+              <span className="font-bold">{favorited}</span> favorites
+            </span>
+          )}
+        </div>
+      </CardContent>
+      <CardFooter className="flex justify-end items-end gap-4 h-full"></CardFooter>
+    </Card>
+  );
+});
+
 export function Authors() {
   const [authors, setAuthors] = useState<Author[]>([]);
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -44,6 +92,9 @@ export function Authors() {
   const [loading, setLoading] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("favorited");
   const [search, setSearch] = useState("");
+  const [limit, setLimit] = useState(PAGE_SIZE);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  const deferredSearch = useDeferredValue(search);
 
   useEffect(() => {
     async function fetchAuthors() {
@@ -65,23 +116,43 @@ export function Authors() {
     fetchAuthors();
   }, []);
 
-  // filter() returns a new array, so sort() doesn't mutate state
-  const query = search.trim().toLowerCase();
-  const visibleAuthors = authors
-    .filter((c) => (recommendedChecked ? c.isRecommended : true))
-    .filter((c) => c.name.toLowerCase().includes(query))
-    .sort((a, b) => {
-      switch (sortBy) {
-        case "name":
-          return a.name.localeCompare(b.name);
-        case "-name":
-          return b.name.localeCompare(a.name);
-        case "favorited":
-          return (b.favorited ?? 0) - (a.favorited ?? 0);
-        case "-favorited":
-          return (a.favorited ?? 0) - (b.favorited ?? 0);
-      }
-    });
+  const visibleAuthors = useMemo(() => {
+    const query = deferredSearch.trim().toLowerCase();
+    return authors
+      .filter((c) => (recommendedChecked ? c.isRecommended : true))
+      .filter((c) => c.name.toLowerCase().includes(query))
+      .sort((a, b) => {
+        switch (sortBy) {
+          case "name":
+            return a.name.localeCompare(b.name);
+          case "-name":
+            return b.name.localeCompare(a.name);
+          case "favorited":
+            return (b.favorited ?? 0) - (a.favorited ?? 0);
+          case "-favorited":
+            return (a.favorited ?? 0) - (b.favorited ?? 0);
+        }
+      });
+  }, [authors, recommendedChecked, deferredSearch, sortBy]);
+
+  // Reset the slice whenever the filter/sort changes
+  useEffect(() => setLimit(PAGE_SIZE), [visibleAuthors]);
+
+  // Infinite scroll: grow the slice when the sentinel nears the viewport
+  useEffect(() => {
+    const el = sentinelRef.current;
+    if (!el) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) setLimit((l) => l + PAGE_SIZE);
+      },
+      { rootMargin: "600px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [visibleAuthors, limit]);
+
+  const shown = visibleAuthors.slice(0, limit);
 
   return (
     <section className="space-y-8">
@@ -134,36 +205,12 @@ export function Authors() {
           </p>
         )}
         {!errorMessage &&
-          visibleAuthors.map(
-            ({ name, isRecommended, favorited, icon, banner }) => (
-              <Card
-                key={name}
-                className="bg-cover bg-center relative overflow-hidden"
-                style={{
-                  backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.8)),url(${banner})`,
-                }}
-              >
-                <CardContent className="flex gap-4 items-center">
-                  <Avatar className="size-20">
-                    <AvatarImage src={icon} />
-                    <AvatarFallback>{name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col">
-                    <CardTitle className="font-bold text-lg">
-                      {isRecommended ? `${name} 👑` : name}
-                    </CardTitle>
-                    {favorited !== undefined && (
-                      <span>
-                        <span className="font-bold">{favorited}</span> favorites
-                      </span>
-                    )}
-                  </div>
-                </CardContent>
-                <CardFooter className="flex justify-end items-end gap-4 h-full"></CardFooter>
-              </Card>
-            ),
-          )}
+          shown.map((a) => <AuthorCard key={a.name} {...a} />)}
       </div>
+
+      {shown.length < visibleAuthors.length && (
+        <div ref={sentinelRef} className="h-10" />
+      )}
     </section>
   );
 }
