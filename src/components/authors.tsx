@@ -1,4 +1,5 @@
-import { Download, Magnet } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Download, Magnet, Star } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { useFavorites } from "@/hooks/use-favorites";
 import {
   Fragment,
   memo,
@@ -161,7 +163,12 @@ const AuthorCard = memo(function AuthorCard({
   banner,
   links,
   makeScenes,
-}: Pick<
+  isFavorite,
+  onToggleFavorite,
+}: {
+  isFavorite: boolean;
+  onToggleFavorite: (name: string) => void;
+} & Pick<
   Author,
   | "name"
   | "isRecommended"
@@ -173,7 +180,12 @@ const AuthorCard = memo(function AuthorCard({
 >) {
   const available = LINK_BUTTONS.filter(({ key }) => isValidUrl(links?.[key]));
   return (
-    <Card className="relative overflow-hidden">
+    <Card
+      className={cn(
+        "relative overflow-hidden",
+        isFavorite && "border-yellow-400 ring-1 ring-yellow-400",
+      )}
+    >
       <img
         src={banner}
         alt=""
@@ -181,7 +193,7 @@ const AuthorCard = memo(function AuthorCard({
         decoding="async"
         className="absolute inset-0 size-full object-cover"
       />
-      <div className="absolute inset-0 bg-linear-to-b from-black/50 to-black/80" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/80" />
       <CardContent className="relative flex gap-4 items-center">
         <Avatar className="size-20">
           <AvatarImage src={icon} loading="lazy" />
@@ -201,6 +213,24 @@ const AuthorCard = memo(function AuthorCard({
         </div>
       </CardContent>
       <CardFooter className="relative flex justify-end items-end gap-2 h-full">
+        <Button
+          type="button"
+          variant="secondary"
+          size="icon"
+          className="mr-auto"
+          aria-pressed={isFavorite}
+          aria-label={
+            isFavorite
+              ? `Remove ${name} from favorites`
+              : `Add ${name} to favorites`
+          }
+          title={isFavorite ? "Remove from favorites" : "Add to favorites"}
+          onClick={() => onToggleFavorite(name)}
+        >
+          <Star
+            className={cn(isFavorite && "fill-yellow-400 text-yellow-400")}
+          />
+        </Button>
         <LinkButton
           linkKey="kknow"
           href={kknowUrlFor(name)}
@@ -235,6 +265,8 @@ export function Authors() {
   const [recommendedChecked, setRecommendedChecked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("favorited");
+  const { favorites, toggleFavorite } = useFavorites();
+  const [favoritesChecked, setFavoritesChecked] = useState(false);
   const [scenesChecked, setScenesChecked] = useState(false);
   const [series, setSeries] = useState<string[]>([]);
   const seriesAnchor = useComboboxAnchor();
@@ -276,13 +308,19 @@ export function Authors() {
     return [...names].sort((a, b) => a.localeCompare(b));
   }, [authors]);
 
+  // Only depend on favorites while the filter is on, so starring a card
+  // doesn't re-filter the list or reset how far the user has scrolled.
+  const favoritesOnly = favoritesChecked ? favorites : null;
+
   const visibleAuthors = useMemo(() => {
     const query = deferredSearch.trim().toLowerCase();
     const selectedSeries = new Set(series);
+    const favoriteSet = favoritesOnly;
     return authors
       .filter((a) => {
         if (recommendedChecked && !a.isRecommended) return false;
         if (scenesChecked && !a.makeScenes) return false;
+        if (favoriteSet && !favoriteSet.has(a.name)) return false;
         if (
           selectedSeries.size > 0 &&
           !a.series?.some((name) => selectedSeries.has(name))
@@ -315,6 +353,7 @@ export function Authors() {
     authors,
     recommendedChecked,
     scenesChecked,
+    favoritesOnly,
     series,
     linkFilters,
     linkMode,
@@ -325,12 +364,14 @@ export function Authors() {
   const hasActiveFilters =
     recommendedChecked ||
     scenesChecked ||
+    favoritesChecked ||
     series.length > 0 ||
     linkFilters.length > 0;
 
   function clearFilters() {
     setRecommendedChecked(false);
     setScenesChecked(false);
+    setFavoritesChecked(false);
     setSeries([]);
     setLinkFilters([]);
     setLinkMode("any");
@@ -476,6 +517,17 @@ export function Authors() {
               🎬 Makes scenes
             </label>
           </div>
+          <div className="flex items-center gap-3">
+            <Checkbox
+              id="favorites-checkbox"
+              checked={favoritesChecked}
+              onCheckedChange={(value) => setFavoritesChecked(value === true)}
+              className="size-6"
+            />
+            <label htmlFor="favorites-checkbox" className="text-lg">
+              ⭐ Favorites
+            </label>
+          </div>
         </div>
 
         <div className="flex items-center justify-between text-sm text-muted-foreground">
@@ -505,7 +557,15 @@ export function Authors() {
             No authors match your search or filters.
           </p>
         )}
-        {!errorMessage && shown.map((a) => <AuthorCard key={a.name} {...a} />)}
+        {!errorMessage &&
+          shown.map((a) => (
+            <AuthorCard
+              key={a.name}
+              {...a}
+              isFavorite={favorites.has(a.name)}
+              onToggleFavorite={toggleFavorite}
+            />
+          ))}
       </div>
 
       {shown.length < visibleAuthors.length && (
