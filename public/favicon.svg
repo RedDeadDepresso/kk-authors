@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#ff7eb3"/>
+      <stop offset="1" stop-color="#7c4dff"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="url(#bg)"/>
+  <!-- bold "K" -->
+  <path fill="#fff" d="M16 14h9v15.5L37.5 14H48L33.5 31.5 49 50H38L25 34.5V50h-9z"/>
+  <!-- small crown (recommended authors) -->
+  <path fill="#ffd54a" d="M40 12l3.5 5 3.5-5 3.5 5 3.5-5v9H40z" transform="translate(-6 -3) scale(0.9)"/>
+</svg>

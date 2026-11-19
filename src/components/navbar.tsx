@@ -28,9 +28,14 @@ export function Navbar() {
           <NavigationMenuItem className="font-bold flex">
             <a
               rel="noreferrer noopener"
-              href="/"
-              className="ml-2 font-bold text-xl flex"
+              href={import.meta.env.BASE_URL}
+              className="ml-2 font-bold text-xl flex items-center gap-2"
             >
+              <img
+                src={`${import.meta.env.BASE_URL}favicon.svg`}
+                alt=""
+                className="size-8"
+              />
               KK Authors
             </a>
           </NavigationMenuItem>
@@ -51,7 +56,12 @@ export function Navbar() {
 
               <SheetContent side={"left"}>
                 <SheetHeader>
-                  <SheetTitle className="font-bold text-xl">
+                  <SheetTitle className="font-bold text-xl flex items-center gap-2">
+                    <img
+                      src={`${import.meta.env.BASE_URL}favicon.svg`}
+                      alt=""
+                      className="size-8"
+                    />
                     KK Authors
                   </SheetTitle>
                 </SheetHeader>
