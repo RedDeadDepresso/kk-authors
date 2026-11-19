@@ -3,6 +3,18 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+  ComboboxValue,
+  useComboboxAnchor,
+} from "@/components/ui/combobox";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -13,6 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
 import {
+  Fragment,
   memo,
   useDeferredValue,
   useEffect,
@@ -163,7 +176,7 @@ const AuthorCard = memo(function AuthorCard({
         decoding="async"
         className="absolute inset-0 size-full object-cover"
       />
-      <div className="absolute inset-0 bg-linear-to-b from-black/50 to-black/80" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/80" />
       <CardContent className="relative flex gap-4 items-center">
         <Avatar className="size-20">
           <AvatarImage src={icon} loading="lazy" />
@@ -171,7 +184,9 @@ const AuthorCard = memo(function AuthorCard({
         </Avatar>
         <div className="flex flex-col">
           <CardTitle className="font-bold text-lg">
-            {isRecommended ? `${name} 👑` : name}
+            {name}
+            {isRecommended && " 👑"}
+            {makeScenes && " 🎬"}
           </CardTitle>
           {favorited !== undefined && (
             <span>
@@ -215,6 +230,11 @@ export function Authors() {
   const [recommendedChecked, setRecommendedChecked] = useState(false);
   const [loading, setLoading] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("favorited");
+  const [scenesChecked, setScenesChecked] = useState(false);
+  const [series, setSeries] = useState<string[]>([]);
+  const seriesAnchor = useComboboxAnchor();
+  const [linkFilters, setLinkFilters] = useState<LinkKey[]>([]);
+  const [linkMode, setLinkMode] = useState<"any" | "all">("any");
   const [search, setSearch] = useState("");
   const [limit, setLimit] = useState(PAGE_SIZE);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -240,11 +260,39 @@ export function Authors() {
     fetchAuthors();
   }, []);
 
+  // All distinct series names for the series filter
+  const seriesOptions = useMemo(() => {
+    const names = new Set<string>();
+    for (const a of authors) {
+      for (const name of a.series ?? []) {
+        if (name) names.add(name);
+      }
+    }
+    return [...names].sort((a, b) => a.localeCompare(b));
+  }, [authors]);
+
   const visibleAuthors = useMemo(() => {
     const query = deferredSearch.trim().toLowerCase();
+    const selectedSeries = new Set(series);
     return authors
-      .filter((c) => (recommendedChecked ? c.isRecommended : true))
-      .filter((c) => c.name.toLowerCase().includes(query))
+      .filter((a) => {
+        if (recommendedChecked && !a.isRecommended) return false;
+        if (scenesChecked && !a.makeScenes) return false;
+        if (
+          selectedSeries.size > 0 &&
+          !a.series?.some((name) => selectedSeries.has(name))
+        )
+          return false;
+        if (linkFilters.length > 0) {
+          const has = (key: LinkKey) => isValidUrl(a.links?.[key]);
+          const ok =
+            linkMode === "all"
+              ? linkFilters.every(has)
+              : linkFilters.some(has);
+          if (!ok) return false;
+        }
+        return a.name.toLowerCase().includes(query);
+      })
       .sort((a, b) => {
         switch (sortBy) {
           case "name":
@@ -257,7 +305,36 @@ export function Authors() {
             return (a.favorited ?? 0) - (b.favorited ?? 0);
         }
       });
-  }, [authors, recommendedChecked, deferredSearch, sortBy]);
+  }, [
+    authors,
+    recommendedChecked,
+    scenesChecked,
+    series,
+    linkFilters,
+    linkMode,
+    deferredSearch,
+    sortBy,
+  ]);
+
+  const hasActiveFilters =
+    recommendedChecked ||
+    scenesChecked ||
+    series.length > 0 ||
+    linkFilters.length > 0;
+
+  function clearFilters() {
+    setRecommendedChecked(false);
+    setScenesChecked(false);
+    setSeries([]);
+    setLinkFilters([]);
+    setLinkMode("any");
+  }
+
+  function toggleLinkFilter(key: LinkKey) {
+    setLinkFilters((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    );
+  }
 
   // Reset the slice whenever the filter/sort changes
   useEffect(() => setLimit(PAGE_SIZE), [visibleAuthors]);
@@ -281,7 +358,7 @@ export function Authors() {
   return (
     <section className="space-y-8">
       <h2 className="text-3xl lg:text-4xl font-bold text-center">Authors</h2>
-      <div className="flex flex-col items-center justify-center gap-4 sm:w-lg mx-auto">
+      <div className="flex flex-col gap-4 w-full max-w-2xl mx-auto">
         <Input
           type="search"
           placeholder="Search for authors..."
@@ -290,18 +367,33 @@ export function Authors() {
           onChange={(e) => setSearch(e.target.value)}
           className="w-full"
         />
-        <div className="w-full flex items-center justify-between gap-4">
-          <div className="flex items-center justify-center gap-4">
-            <Checkbox
-              id="terms-checkbox-basic"
-              name="terms-checkbox-basic"
-              checked={recommendedChecked}
-              onCheckedChange={(value) => setRecommendedChecked(value === true)}
-              className="size-6"
-            />
-            <label htmlFor="terms-checkbox-basic" className="text-lg">
-              👑 Recommended
-            </label>
+
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-6">
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="recommended-checkbox"
+                checked={recommendedChecked}
+                onCheckedChange={(value) =>
+                  setRecommendedChecked(value === true)
+                }
+                className="size-6"
+              />
+              <label htmlFor="recommended-checkbox" className="text-lg">
+                👑 Recommended
+              </label>
+            </div>
+            <div className="flex items-center gap-3">
+              <Checkbox
+                id="scenes-checkbox"
+                checked={scenesChecked}
+                onCheckedChange={(value) => setScenesChecked(value === true)}
+                className="size-6"
+              />
+              <label htmlFor="scenes-checkbox" className="text-lg">
+                🎬 Makes scenes
+              </label>
+            </div>
           </div>
           <Select
             value={sortBy}
@@ -318,6 +410,80 @@ export function Authors() {
             </SelectContent>
           </Select>
         </div>
+
+        <Combobox
+          multiple
+          autoHighlight
+          items={seriesOptions}
+          value={series}
+          onValueChange={(value) => setSeries(value)}
+        >
+          <ComboboxChips ref={seriesAnchor} className="w-full">
+            <ComboboxValue>
+              {(values: string[]) => (
+                <Fragment>
+                  {values.map((value) => (
+                    <ComboboxChip key={value}>{value}</ComboboxChip>
+                  ))}
+                  <ComboboxChipsInput
+                    placeholder={
+                      values.length === 0 ? "Filter by series..." : ""
+                    }
+                    aria-label="Filter by series"
+                  />
+                </Fragment>
+              )}
+            </ComboboxValue>
+          </ComboboxChips>
+          <ComboboxContent anchor={seriesAnchor}>
+            <ComboboxEmpty>No series found.</ComboboxEmpty>
+            <ComboboxList>
+              {(item: string) => (
+                <ComboboxItem key={item} value={item}>
+                  {item}
+                </ComboboxItem>
+              )}
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">Has link:</span>
+          {LINK_BUTTONS.map(({ key, label }) => (
+            <Button
+              key={key}
+              type="button"
+              size="sm"
+              variant={linkFilters.includes(key) ? "default" : "outline"}
+              aria-pressed={linkFilters.includes(key)}
+              onClick={() => toggleLinkFilter(key)}
+            >
+              {label}
+            </Button>
+          ))}
+          {linkFilters.length > 1 && (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              onClick={() => setLinkMode((m) => (m === "any" ? "all" : "any"))}
+              title="Toggle between matching any or all selected links"
+            >
+              Match: {linkMode === "any" ? "any (OR)" : "all (AND)"}
+            </Button>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between text-sm text-muted-foreground">
+          <span>
+            {loading ? "" : `${visibleAuthors.length} of ${authors.length} authors`}
+          </span>
+          {hasActiveFilters && (
+            <Button type="button" size="sm" variant="ghost" onClick={clearFilters}>
+              Clear filters
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -325,7 +491,7 @@ export function Authors() {
         {errorMessage && <p className="text-xl text-red-500">{errorMessage}</p>}
         {!loading && !errorMessage && visibleAuthors.length === 0 && (
           <p className="text-lg col-span-full text-center">
-            No authors match your search.
+            No authors match your search or filters.
           </p>
         )}
         {!errorMessage &&
