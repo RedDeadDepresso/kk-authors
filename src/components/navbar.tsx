@@ -22,7 +22,7 @@ export function Navbar() {
   const GITHUB_USERNAME = "RedDeadDepresso";
 
   return (
-    <header className="border-b-[1px] top-0 z-40 w-full bg-white dark:border-b-slate-700 dark:bg-background">
+    <header className="border-b top-0 z-40 w-full bg-white dark:border-b-slate-700 dark:bg-background">
       <NavigationMenu className="mx-auto">
         <NavigationMenuList className="container h-14 px-4 w-screen flex justify-between ">
           <NavigationMenuItem className="font-bold flex">
@@ -70,7 +70,7 @@ export function Navbar() {
                     rel="noreferrer noopener"
                     href={`https://github.com/${GITHUB_USERNAME}`}
                     target="_blank"
-                    className={`w-[110px] border ${buttonVariants({
+                    className={`w-27.5 border ${buttonVariants({
                       variant: "outline",
                     })}`}
                   >

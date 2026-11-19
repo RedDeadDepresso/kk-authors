@@ -68,10 +68,9 @@ type LinkKey = keyof Links;
 // "icon" files live in public/icons/<key>.png; download uses a lucide icon
 const LINK_BUTTONS: { key: LinkKey; label: string }[] = [
   { key: "pixiv", label: "Pixiv" },
-  { key: "bepis", label: "Bepis" },
   { key: "koikatsucards", label: "KoikatsuCards" },
+  { key: "bepis", label: "Bepis" },
   { key: "pawchive", label: "Pawchive" },
-  { key: "download", label: "Download" },
 ];
 
 function isValidUrl(url: string | undefined): url is string {
@@ -121,12 +120,7 @@ function LinkButton({
     linkKey === "download" || linkKey === "scenes" || iconFailed;
 
   return (
-    <Button
-      asChild
-      variant="secondary"
-      size="icon"
-      title={`${author} on ${label}`}
-    >
+    <Button asChild variant="ghost" size="icon" title={`${author} on ${label}`}>
       <a
         href={href}
         {...(isMagnet ? {} : { target: "_blank", rel: "noopener noreferrer" })}
@@ -182,7 +176,7 @@ const AuthorCard = memo(function AuthorCard({
   return (
     <Card
       className={cn(
-        "relative overflow-hidden",
+        "relative overflow-hidden text-white",
         isFavorite && "border-yellow-400 ring-1 ring-yellow-400",
       )}
     >
@@ -193,7 +187,7 @@ const AuthorCard = memo(function AuthorCard({
         decoding="async"
         className="absolute inset-0 size-full object-cover"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/80" />
+      <div className="absolute inset-0 bg-linear-to-b from-black/50 to-black/80" />
       <CardContent className="relative flex gap-4 items-center">
         <Avatar className="size-20">
           <AvatarImage src={icon} loading="lazy" />
@@ -211,13 +205,11 @@ const AuthorCard = memo(function AuthorCard({
             </span>
           )}
         </div>
-      </CardContent>
-      <CardFooter className="relative flex justify-end items-end gap-2 h-full">
         <Button
           type="button"
           variant="secondary"
           size="icon"
-          className="mr-auto"
+          className="dark ml-auto"
           aria-pressed={isFavorite}
           aria-label={
             isFavorite
@@ -231,6 +223,17 @@ const AuthorCard = memo(function AuthorCard({
             className={cn(isFavorite && "fill-yellow-400 text-yellow-400")}
           />
         </Button>
+      </CardContent>
+      <CardFooter className="relative flex items-end gap-2 h-full">
+        {available.map(({ key, label }) => (
+          <LinkButton
+            key={key}
+            linkKey={key}
+            href={links[key]}
+            label={label}
+            author={name}
+          />
+        ))}
         <LinkButton
           linkKey="kknow"
           href={kknowUrlFor(name)}
@@ -245,15 +248,14 @@ const AuthorCard = memo(function AuthorCard({
             author={name}
           />
         )}
-        {available.map(({ key, label }) => (
+        {links.download && (
           <LinkButton
-            key={key}
-            linkKey={key}
-            href={links[key]}
-            label={label}
+            linkKey="download"
+            href={links.download}
+            label="Download"
             author={name}
           />
-        ))}
+        )}
       </CardFooter>
     </Card>
   );
