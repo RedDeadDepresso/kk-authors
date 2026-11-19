@@ -49,7 +49,7 @@ interface Author {
   alias: string[];
   series: string[];
   isRecommended: boolean;
-  makeScenes: boolean;
+  makesScenes: boolean;
   favorited: number;
   icon: string;
   banner: string;
@@ -93,7 +93,7 @@ function kknowUrlFor(name: string): string {
   return `${KKNOW_SEARCH_URL}?keywords=${encodeURIComponent(name)}&order=date`;
 }
 
-// Pepper's Scene Archive torrent, shown for authors with makeScenes = true
+// Pepper's Scene Archive torrent, shown for authors with makesScenes = true
 const SCENES_MAGNET_URL =
   "magnet:?xt=urn:btih:9c8e8b96c3c55322b15310f37dd80cb40f5d274d&dn=Pepper%27s_Scene_Archive&xl=793193494300";
 
@@ -156,7 +156,7 @@ const AuthorCard = memo(function AuthorCard({
   icon,
   banner,
   links,
-  makeScenes,
+  makesScenes,
   isFavorite,
   onToggleFavorite,
 }: {
@@ -170,7 +170,7 @@ const AuthorCard = memo(function AuthorCard({
   | "icon"
   | "banner"
   | "links"
-  | "makeScenes"
+  | "makesScenes"
 >) {
   const available = LINK_BUTTONS.filter(({ key }) => isValidUrl(links?.[key]));
   return (
@@ -197,7 +197,7 @@ const AuthorCard = memo(function AuthorCard({
           <CardTitle className="font-bold text-lg">
             {name}
             {isRecommended && " 👑"}
-            {makeScenes && " 🎬"}
+            {makesScenes && " 🎬"}
           </CardTitle>
           {favorited !== undefined && (
             <span>
@@ -240,7 +240,7 @@ const AuthorCard = memo(function AuthorCard({
           label="KKnow"
           author={name}
         />
-        {makeScenes && (
+        {makesScenes && (
           <LinkButton
             linkKey="scenes"
             href={SCENES_MAGNET_URL}
@@ -321,7 +321,7 @@ export function Authors() {
     return authors
       .filter((a) => {
         if (recommendedChecked && !a.isRecommended) return false;
-        if (scenesChecked && !a.makeScenes) return false;
+        if (scenesChecked && !a.makesScenes) return false;
         if (favoriteSet && !favoriteSet.has(a.name)) return false;
         if (
           selectedSeries.size > 0 &&
