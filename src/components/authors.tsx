@@ -115,7 +115,8 @@ function LinkButton({
 }) {
   const [iconFailed, setIconFailed] = useState(false);
   const isMagnet = href.startsWith("magnet:");
-  const useLucide = linkKey === "download" || linkKey === "scenes" || iconFailed;
+  const useLucide =
+    linkKey === "download" || linkKey === "scenes" || iconFailed;
 
   return (
     <Button
@@ -162,11 +163,15 @@ const AuthorCard = memo(function AuthorCard({
   makeScenes,
 }: Pick<
   Author,
-  "name" | "isRecommended" | "favorited" | "icon" | "banner" | "links" | "makeScenes"
+  | "name"
+  | "isRecommended"
+  | "favorited"
+  | "icon"
+  | "banner"
+  | "links"
+  | "makeScenes"
 >) {
-  const available = LINK_BUTTONS.filter(({ key }) =>
-    isValidUrl(links?.[key]),
-  );
+  const available = LINK_BUTTONS.filter(({ key }) => isValidUrl(links?.[key]));
   return (
     <Card className="relative overflow-hidden">
       <img
@@ -176,7 +181,7 @@ const AuthorCard = memo(function AuthorCard({
         decoding="async"
         className="absolute inset-0 size-full object-cover"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/80" />
+      <div className="absolute inset-0 bg-linear-to-b from-black/50 to-black/80" />
       <CardContent className="relative flex gap-4 items-center">
         <Avatar className="size-20">
           <AvatarImage src={icon} loading="lazy" />
@@ -210,15 +215,15 @@ const AuthorCard = memo(function AuthorCard({
             author={name}
           />
         )}
-          {available.map(({ key, label }) => (
-            <LinkButton
-              key={key}
-              linkKey={key}
-              href={links[key]}
-              label={label}
-              author={name}
-            />
-          ))}
+        {available.map(({ key, label }) => (
+          <LinkButton
+            key={key}
+            linkKey={key}
+            href={links[key]}
+            label={label}
+            author={name}
+          />
+        ))}
       </CardFooter>
     </Card>
   );
@@ -286,12 +291,13 @@ export function Authors() {
         if (linkFilters.length > 0) {
           const has = (key: LinkKey) => isValidUrl(a.links?.[key]);
           const ok =
-            linkMode === "all"
-              ? linkFilters.every(has)
-              : linkFilters.some(has);
+            linkMode === "all" ? linkFilters.every(has) : linkFilters.some(has);
           if (!ok) return false;
         }
-        return a.name.toLowerCase().includes(query);
+        return (
+          a.name.toLowerCase().includes(query) ||
+          (a.alias ?? []).some((alias) => alias.toLowerCase().includes(query))
+        );
       })
       .sort((a, b) => {
         switch (sortBy) {
@@ -359,42 +365,15 @@ export function Authors() {
     <section className="space-y-8">
       <h2 className="text-3xl lg:text-4xl font-bold text-center">Authors</h2>
       <div className="flex flex-col gap-4 w-full max-w-2xl mx-auto">
-        <Input
-          type="search"
-          placeholder="Search for authors..."
-          aria-label="Search authors by name"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full"
-        />
-
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-6">
-            <div className="flex items-center gap-3">
-              <Checkbox
-                id="recommended-checkbox"
-                checked={recommendedChecked}
-                onCheckedChange={(value) =>
-                  setRecommendedChecked(value === true)
-                }
-                className="size-6"
-              />
-              <label htmlFor="recommended-checkbox" className="text-lg">
-                👑 Recommended
-              </label>
-            </div>
-            <div className="flex items-center gap-3">
-              <Checkbox
-                id="scenes-checkbox"
-                checked={scenesChecked}
-                onCheckedChange={(value) => setScenesChecked(value === true)}
-                className="size-6"
-              />
-              <label htmlFor="scenes-checkbox" className="text-lg">
-                🎬 Makes scenes
-              </label>
-            </div>
-          </div>
+        <div className="flex items-center gap-4">
+          <Input
+            type="search"
+            placeholder="Search by name or alias..."
+            aria-label="Search authors by name or alias"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="flex-1"
+          />
           <Select
             value={sortBy}
             onValueChange={(value) => setSortBy(value as SortOption)}
@@ -474,12 +453,44 @@ export function Authors() {
           )}
         </div>
 
+        <div className="flex flex-wrap items-center gap-6">
+          <div className="flex items-center gap-3">
+            <Checkbox
+              id="recommended-checkbox"
+              checked={recommendedChecked}
+              onCheckedChange={(value) => setRecommendedChecked(value === true)}
+              className="size-6"
+            />
+            <label htmlFor="recommended-checkbox" className="text-lg">
+              👑 Recommended
+            </label>
+          </div>
+          <div className="flex items-center gap-3">
+            <Checkbox
+              id="scenes-checkbox"
+              checked={scenesChecked}
+              onCheckedChange={(value) => setScenesChecked(value === true)}
+              className="size-6"
+            />
+            <label htmlFor="scenes-checkbox" className="text-lg">
+              🎬 Makes scenes
+            </label>
+          </div>
+        </div>
+
         <div className="flex items-center justify-between text-sm text-muted-foreground">
           <span>
-            {loading ? "" : `${visibleAuthors.length} of ${authors.length} authors`}
+            {loading
+              ? ""
+              : `${visibleAuthors.length} of ${authors.length} authors`}
           </span>
           {hasActiveFilters && (
-            <Button type="button" size="sm" variant="ghost" onClick={clearFilters}>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={clearFilters}
+            >
               Clear filters
             </Button>
           )}
@@ -494,8 +505,7 @@ export function Authors() {
             No authors match your search or filters.
           </p>
         )}
-        {!errorMessage &&
-          shown.map((a) => <AuthorCard key={a.name} {...a} />)}
+        {!errorMessage && shown.map((a) => <AuthorCard key={a.name} {...a} />)}
       </div>
 
       {shown.length < visibleAuthors.length && (
