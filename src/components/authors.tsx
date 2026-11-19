@@ -1,4 +1,6 @@
+import { Download, Magnet } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -46,6 +48,96 @@ const AUTHORS_URL =
 
 const PAGE_SIZE = 60;
 
+type LinkKey = keyof Links;
+
+// "icon" files live in public/icons/<key>.png; download uses a lucide icon
+const LINK_BUTTONS: { key: LinkKey; label: string }[] = [
+  { key: "pixiv", label: "Pixiv" },
+  { key: "bepis", label: "Bepis" },
+  { key: "koikatsucards", label: "KoikatsuCards" },
+  { key: "pawchive", label: "Pawchive" },
+  { key: "download", label: "Download" },
+];
+
+function isValidUrl(url: string | undefined): url is string {
+  if (!url) return false;
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+// kknow.cc is a XenForo forum. /search/<id>/ URLs are one-off results that the
+// server generates after a search is submitted, so they can't be built by hand.
+// /search/search/ is the endpoint that actually runs a new search from a URL.
+const KKNOW_SEARCH_URL = "https://kknow.cc/search/search/";
+
+// Always available: search KKnow for the author's name, newest first
+function kknowUrlFor(name: string): string {
+  return `${KKNOW_SEARCH_URL}?keywords=${encodeURIComponent(name)}&order=date`;
+}
+
+// Pepper's Scene Archive torrent, shown for authors with makeScenes = true
+const SCENES_MAGNET_URL =
+  "magnet:?xt=urn:btih:9c8e8b96c3c55322b15310f37dd80cb40f5d274d&dn=Pepper%27s_Scene_Archive&xl=793193494300";
+
+type ButtonKey = LinkKey | "kknow" | "scenes";
+
+function iconFor(key: ButtonKey): string {
+  return `${import.meta.env.BASE_URL}icons/${key}.png`;
+}
+
+function LinkButton({
+  linkKey,
+  href,
+  label,
+  author,
+}: {
+  linkKey: ButtonKey;
+  href: string;
+  label: string;
+  author: string;
+}) {
+  const [iconFailed, setIconFailed] = useState(false);
+  const isMagnet = href.startsWith("magnet:");
+  const useLucide = linkKey === "download" || linkKey === "scenes" || iconFailed;
+
+  return (
+    <Button
+      asChild
+      variant="secondary"
+      size="icon"
+      title={`${author} on ${label}`}
+    >
+      <a
+        href={href}
+        {...(isMagnet ? {} : { target: "_blank", rel: "noopener noreferrer" })}
+        aria-label={`${author} on ${label}`}
+      >
+        {useLucide ? (
+          linkKey === "download" ? (
+            <Download />
+          ) : linkKey === "scenes" ? (
+            <Magnet />
+          ) : (
+            <span className="text-xs font-bold">{label.charAt(0)}</span>
+          )
+        ) : (
+          <img
+            src={iconFor(linkKey)}
+            alt=""
+            loading="lazy"
+            className="size-5 rounded-sm"
+            onError={() => setIconFailed(true)}
+          />
+        )}
+      </a>
+    </Button>
+  );
+}
+
 // Memoized so unchanged cards don't re-render; banner is a real lazy <img>
 const AuthorCard = memo(function AuthorCard({
   name,
@@ -53,7 +145,15 @@ const AuthorCard = memo(function AuthorCard({
   favorited,
   icon,
   banner,
-}: Pick<Author, "name" | "isRecommended" | "favorited" | "icon" | "banner">) {
+  links,
+  makeScenes,
+}: Pick<
+  Author,
+  "name" | "isRecommended" | "favorited" | "icon" | "banner" | "links" | "makeScenes"
+>) {
+  const available = LINK_BUTTONS.filter(({ key }) =>
+    isValidUrl(links?.[key]),
+  );
   return (
     <Card className="relative overflow-hidden">
       <img
@@ -63,7 +163,7 @@ const AuthorCard = memo(function AuthorCard({
         decoding="async"
         className="absolute inset-0 size-full object-cover"
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/80" />
+      <div className="absolute inset-0 bg-linear-to-b from-black/50 to-black/80" />
       <CardContent className="relative flex gap-4 items-center">
         <Avatar className="size-20">
           <AvatarImage src={icon} loading="lazy" />
@@ -80,7 +180,31 @@ const AuthorCard = memo(function AuthorCard({
           )}
         </div>
       </CardContent>
-      <CardFooter className="flex justify-end items-end gap-4 h-full"></CardFooter>
+      <CardFooter className="relative flex justify-end items-end gap-2 h-full">
+        <LinkButton
+          linkKey="kknow"
+          href={kknowUrlFor(name)}
+          label="KKnow"
+          author={name}
+        />
+        {makeScenes && (
+          <LinkButton
+            linkKey="scenes"
+            href={SCENES_MAGNET_URL}
+            label="Pepper's Scene Archive (magnet)"
+            author={name}
+          />
+        )}
+          {available.map(({ key, label }) => (
+            <LinkButton
+              key={key}
+              linkKey={key}
+              href={links[key]}
+              label={label}
+              author={name}
+            />
+          ))}
+      </CardFooter>
     </Card>
   );
 });
