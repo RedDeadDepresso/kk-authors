@@ -93,11 +93,17 @@ function kknowUrlFor(name: string): string {
   return `${KKNOW_SEARCH_URL}?keywords=${encodeURIComponent(name)}&order=date`;
 }
 
+// Telegram Web can't be searched through a URL. The button opens Telegram Web and
+// carries the author name in data-kkafio-telegram: the KKAFIO Link Collector
+// extension picks that up on click and types the name into Telegram's search box.
+// Without the extension it just opens Telegram Web.
+const TELEGRAM_URL = "https://web.telegram.org/k/";
+
 // Pepper's Scene Archive torrent, shown for authors with makesScenes = true
 const SCENES_MAGNET_URL =
   "magnet:?xt=urn:btih:9c8e8b96c3c55322b15310f37dd80cb40f5d274d&dn=Pepper%27s_Scene_Archive&xl=793193494300";
 
-type ButtonKey = LinkKey | "kknow" | "scenes";
+type ButtonKey = LinkKey | "kknow" | "telegram" | "scenes";
 
 function iconFor(key: ButtonKey): string {
   return `${import.meta.env.BASE_URL}icons/${key}.png`;
@@ -108,11 +114,13 @@ function LinkButton({
   href,
   label,
   author,
+  telegramQuery,
 }: {
   linkKey: ButtonKey;
   href: string;
   label: string;
   author: string;
+  telegramQuery?: string;
 }) {
   const [iconFailed, setIconFailed] = useState(false);
   const isMagnet = href.startsWith("magnet:");
@@ -125,6 +133,7 @@ function LinkButton({
         href={href}
         {...(isMagnet ? {} : { target: "_blank", rel: "noopener noreferrer" })}
         aria-label={`${author} on ${label}`}
+        {...(telegramQuery ? { "data-kkafio-telegram": telegramQuery } : {})}
       >
         {useLucide ? (
           linkKey === "download" ? (
@@ -239,6 +248,13 @@ const AuthorCard = memo(function AuthorCard({
           href={kknowUrlFor(name)}
           label="KKnow"
           author={name}
+        />
+        <LinkButton
+          linkKey="telegram"
+          href={TELEGRAM_URL}
+          label="Telegram"
+          author={name}
+          telegramQuery={name}
         />
         {makesScenes && (
           <LinkButton
