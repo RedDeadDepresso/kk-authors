@@ -319,6 +319,7 @@ export function Authors() {
   const { favorites, toggleFavorite } = useFavorites();
   const [favoritesChecked, setFavoritesChecked] = useState(false);
   const [scenesChecked, setScenesChecked] = useState(false);
+  const [telegramChecked, setTelegramChecked] = useState(false);
   const [series, setSeries] = useState<string[]>([]);
   const seriesAnchor = useComboboxAnchor();
   const [linkFilters, setLinkFilters] = useState<LinkKey[]>([]);
@@ -371,6 +372,7 @@ export function Authors() {
       .filter((a) => {
         if (recommendedChecked && !a.isRecommended) return false;
         if (scenesChecked && !a.makesScenes) return false;
+        if (telegramChecked && !a.telegram?.trim()) return false;
         if (favoriteSet && !favoriteSet.has(a.name)) return false;
         if (
           selectedSeries.size > 0 &&
@@ -404,6 +406,7 @@ export function Authors() {
     authors,
     recommendedChecked,
     scenesChecked,
+    telegramChecked,
     favoritesOnly,
     series,
     linkFilters,
@@ -415,6 +418,7 @@ export function Authors() {
   const hasActiveFilters =
     recommendedChecked ||
     scenesChecked ||
+    telegramChecked ||
     favoritesChecked ||
     series.length > 0 ||
     linkFilters.length > 0;
@@ -422,6 +426,7 @@ export function Authors() {
   function clearFilters() {
     setRecommendedChecked(false);
     setScenesChecked(false);
+    setTelegramChecked(false);
     setFavoritesChecked(false);
     setSeries([]);
     setLinkFilters([]);
@@ -566,6 +571,17 @@ export function Authors() {
             />
             <label htmlFor="scenes-checkbox" className="text-lg">
               🎬 Makes scenes
+            </label>
+          </div>
+          <div className="flex items-center gap-3">
+            <Checkbox
+              id="telegram-checkbox"
+              checked={telegramChecked}
+              onCheckedChange={(value) => setTelegramChecked(value === true)}
+              className="size-6"
+            />
+            <label htmlFor="telegram-checkbox" className="text-lg">
+              ✈️ Telegram tag
             </label>
           </div>
           <div className="flex items-center gap-3">
