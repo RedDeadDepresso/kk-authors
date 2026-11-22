@@ -16,6 +16,13 @@ import {
   ComboboxValue,
   useComboboxAnchor,
 } from "@/components/ui/combobox";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -51,7 +58,7 @@ interface Author {
   isRecommended: boolean;
   makesScenes: boolean;
   favorited: number;
-  telegram: string;
+  telegram: string[];
   icon: string;
   banner: string;
   links: Links;
@@ -99,6 +106,11 @@ function kknowUrlFor(name: string): string {
 // extension picks that up on click and types the name into Telegram's search box.
 // Without the extension it just opens Telegram Web.
 const TELEGRAM_URL = "https://web.telegram.org/k/";
+
+// Normalizes the optional `telegram` field: trimmed, non-empty, unique tags.
+function telegramTags(value: string[]): string[] {
+  return [...new Set((value ?? []).map((t) => t.trim()).filter(Boolean))];
+}
 
 // Pepper's Scene Archive torrent, shown for authors with makesScenes = true
 const SCENES_MAGNET_URL =
@@ -173,6 +185,43 @@ function LinkButton({
   );
 }
 
+// Several Telegram tags: one button with a menu, one entry per tag.
+function TelegramTagsMenu({ author, tags }: { author: string; tags: string[] }) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          title={`${tags.length} Telegram tags`}
+          aria-label={`${author} Telegram tags`}
+        >
+          <img src={iconFor("telegram")} alt="" className="size-5 rounded-sm" />
+          <span className="absolute -top-0.5 -right-0.5 rounded-full bg-primary px-1 text-[10px] font-bold leading-4 text-primary-foreground">
+            #{tags.length}
+          </span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Search on Telegram</DropdownMenuLabel>
+        {tags.map((tag) => (
+          <DropdownMenuItem key={tag} asChild>
+            <a
+              href={TELEGRAM_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              data-kkafio-telegram={tag}
+            >
+              {tag}
+            </a>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 // Memoized so unchanged cards don't re-render; banner is a real lazy <img>
 const AuthorCard = memo(function AuthorCard({
   name,
@@ -200,6 +249,7 @@ const AuthorCard = memo(function AuthorCard({
   | "makesScenes"
 >) {
   const available = LINK_BUTTONS.filter(({ key }) => isValidUrl(links?.[key]));
+  const tags = telegramTags(telegram).filter((t) => t !== name);
   return (
     <Card
       className={cn(
@@ -231,8 +281,10 @@ const AuthorCard = memo(function AuthorCard({
               <span className="font-bold">{favorited}</span> favorites
             </span>
           )}
-          {telegram && telegram !== name && (
-            <span className="text-sm text-white/80">Telegram: {telegram}</span>
+          {tags.length > 0 && (
+            <span className="text-sm text-white/80">
+              Telegram: {tags.join(", ")}
+            </span>
           )}
         </div>
         <Button
@@ -278,17 +330,18 @@ const AuthorCard = memo(function AuthorCard({
           telegramQuery={name}
           title={`Search ${name} on Telegram`}
         />
-        {telegram && telegram !== name && (
+        {tags.length === 1 && (
           <LinkButton
             linkKey="telegram"
             href={TELEGRAM_URL}
             label="Telegram"
             author={name}
-            telegramQuery={telegram}
-            title={`Search ${telegram} on Telegram`}
+            telegramQuery={tags[0]}
+            title={`Search ${tags[0]} on Telegram`}
             badge="#"
           />
         )}
+        {tags.length > 1 && <TelegramTagsMenu author={name} tags={tags} />}
         {makesScenes && (
           <LinkButton
             linkKey="scenes"
@@ -372,7 +425,8 @@ export function Authors() {
       .filter((a) => {
         if (recommendedChecked && !a.isRecommended) return false;
         if (scenesChecked && !a.makesScenes) return false;
-        if (telegramChecked && !a.telegram?.trim()) return false;
+        if (telegramChecked && telegramTags(a.telegram).length === 0)
+          return false;
         if (favoriteSet && !favoriteSet.has(a.name)) return false;
         if (
           selectedSeries.size > 0 &&
