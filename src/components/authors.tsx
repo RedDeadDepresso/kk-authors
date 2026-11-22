@@ -51,6 +51,7 @@ interface Author {
   isRecommended: boolean;
   makesScenes: boolean;
   favorited: number;
+  telegram: string;
   icon: string;
   banner: string;
   links: Links;
@@ -115,12 +116,16 @@ function LinkButton({
   label,
   author,
   telegramQuery,
+  title,
+  badge,
 }: {
   linkKey: ButtonKey;
   href: string;
   label: string;
   author: string;
   telegramQuery?: string;
+  title?: string;
+  badge?: string; // small marker on the icon, to tell two buttons with the same icon apart
 }) {
   const [iconFailed, setIconFailed] = useState(false);
   const isMagnet = href.startsWith("magnet:");
@@ -128,7 +133,13 @@ function LinkButton({
     linkKey === "download" || linkKey === "scenes" || iconFailed;
 
   return (
-    <Button asChild variant="ghost" size="icon" title={`${author} on ${label}`}>
+    <Button
+      asChild
+      variant="ghost"
+      size="icon"
+      className="relative"
+      title={title ?? `${author} on ${label}`}
+    >
       <a
         href={href}
         {...(isMagnet ? {} : { target: "_blank", rel: "noopener noreferrer" })}
@@ -152,6 +163,11 @@ function LinkButton({
             onError={() => setIconFailed(true)}
           />
         )}
+        {badge && (
+          <span className="absolute -top-0.5 -right-0.5 rounded-full bg-primary px-1 text-[10px] font-bold leading-4 text-primary-foreground">
+            {badge}
+          </span>
+        )}
       </a>
     </Button>
   );
@@ -162,6 +178,7 @@ const AuthorCard = memo(function AuthorCard({
   name,
   isRecommended,
   favorited,
+  telegram,
   icon,
   banner,
   links,
@@ -176,6 +193,7 @@ const AuthorCard = memo(function AuthorCard({
   | "name"
   | "isRecommended"
   | "favorited"
+  | "telegram"
   | "icon"
   | "banner"
   | "links"
@@ -212,6 +230,9 @@ const AuthorCard = memo(function AuthorCard({
             <span>
               <span className="font-bold">{favorited}</span> favorites
             </span>
+          )}
+          {telegram && telegram !== name && (
+            <span className="text-sm text-white/80">Telegram: {telegram}</span>
           )}
         </div>
         <Button
@@ -255,7 +276,19 @@ const AuthorCard = memo(function AuthorCard({
           label="Telegram"
           author={name}
           telegramQuery={name}
+          title={`Search ${name} on Telegram`}
         />
+        {telegram && telegram !== name && (
+          <LinkButton
+            linkKey="telegram"
+            href={TELEGRAM_URL}
+            label="Telegram"
+            author={name}
+            telegramQuery={telegram}
+            title={`Search ${telegram} on Telegram`}
+            badge="#"
+          />
+        )}
         {makesScenes && (
           <LinkButton
             linkKey="scenes"
