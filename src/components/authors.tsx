@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Download, Magnet, Star } from "lucide-react";
+import { ArrowUp, Download, Magnet, Star } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
@@ -219,6 +219,32 @@ function TelegramTagsMenu({ author, tags }: { author: string; tags: string[] }) 
         ))}
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+// Floating "back to top" button, shown once the page is scrolled down a bit.
+function BackToTop() {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > 600);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return (
+    <Button
+      type="button"
+      size="icon"
+      aria-label="Back to top"
+      title="Back to top"
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+      className={cn(
+        "fixed bottom-6 right-6 z-50 size-12 rounded-full shadow-lg transition-opacity",
+        visible ? "opacity-100" : "pointer-events-none opacity-0",
+      )}
+    >
+      <ArrowUp className="size-6" />
+    </Button>
   );
 }
 
@@ -671,7 +697,11 @@ export function Authors() {
       </div>
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {loading && <Spinner />}
+        {loading && (
+          <div className="col-span-full flex justify-center py-24">
+            <Spinner className="size-16" />
+          </div>
+        )}
         {errorMessage && <p className="text-xl text-red-500">{errorMessage}</p>}
         {!loading && !errorMessage && visibleAuthors.length === 0 && (
           <p className="text-lg col-span-full text-center">
@@ -692,6 +722,8 @@ export function Authors() {
       {shown.length < visibleAuthors.length && (
         <div ref={sentinelRef} className="h-10" />
       )}
+
+      <BackToTop />
     </section>
   );
 }
