@@ -67,7 +67,7 @@ interface Author {
 type SortOption = "name" | "-name" | "favorited" | "-favorited";
 
 const AUTHORS_URL =
-  "https://reddeaddepresso.github.io/kk-author-scraper/indices/author.json";
+  "https://reddeaddepresso.github.io/kk-author-scraper/indices/author_detailed.json";
 
 const PAGE_SIZE = 60;
 
