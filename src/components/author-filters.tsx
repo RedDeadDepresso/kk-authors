@@ -1,5 +1,4 @@
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Combobox,
   ComboboxChip,
@@ -24,21 +23,20 @@ import type { AuthorFilters, FlagKey } from "@/hooks/use-author-filters";
 import {
   DOWNLOAD_BUTTONS,
   LINK_BUTTONS,
-  type FilterKey,
   type SortOption,
 } from "@/lib/authors";
 import { Fragment } from "react";
 
-const FLAG_CHECKBOXES: { key: FlagKey; label: string }[] = [
+const FLAG_BUTTONS: { key: FlagKey; label: string }[] = [
+  { key: "favorites", label: "⭐ Favorites" },
   { key: "recommended", label: "👑 Recommended" },
   { key: "scenes", label: "🎬 Makes scenes" },
   { key: "archive", label: "🧲 In scene archive" },
-  { key: "telegram", label: "✈️ Telegram tag" },
-  { key: "favorites", label: "⭐ Favorites" },
+  { key: "telegram", label: "#️⃣ Telegram tag" },
 ];
 
-/** A row of toggle buttons ("Has link:", "Has download:"). */
-function FilterButtonRow({
+/** A row of toggle buttons ("Has link:", "Has download:", "Show only:"). */
+function FilterButtonRow<K extends string>({
   heading,
   options,
   selected,
@@ -46,9 +44,9 @@ function FilterButtonRow({
   children,
 }: {
   heading: string;
-  options: { key: FilterKey; label: string }[];
-  selected: FilterKey[];
-  onToggle: (key: FilterKey) => void;
+  options: { key: K; label: string }[];
+  selected: K[];
+  onToggle: (key: K) => void;
   children?: React.ReactNode;
 }) {
   return (
@@ -101,7 +99,7 @@ export function AuthorFilters({
   } = filters;
 
   return (
-    <div className="flex flex-col gap-4 w-full max-w-2xl mx-auto">
+    <div className="flex flex-col gap-4 w-full max-w-3xl mx-auto">
       <div className="flex items-center gap-4">
         <Input
           type="search"
@@ -162,6 +160,13 @@ export function AuthorFilters({
       </Combobox>
 
       <FilterButtonRow
+        heading="Show only:"
+        options={FLAG_BUTTONS}
+        selected={FLAG_BUTTONS.filter(({ key }) => flags[key]).map((f) => f.key)}
+        onToggle={(key) => setFlag(key, !flags[key])}
+      />
+
+      <FilterButtonRow
         heading="Has link:"
         options={LINK_BUTTONS}
         selected={linkFilters}
@@ -185,22 +190,6 @@ export function AuthorFilters({
           </Button>
         )}
       </FilterButtonRow>
-
-      <div className="flex flex-wrap items-center gap-6">
-        {FLAG_CHECKBOXES.map(({ key, label }) => (
-          <div key={key} className="flex items-center gap-3">
-            <Checkbox
-              id={`${key}-checkbox`}
-              checked={flags[key]}
-              onCheckedChange={(value) => setFlag(key, value === true)}
-              className="size-6"
-            />
-            <label htmlFor={`${key}-checkbox`} className="text-lg">
-              {label}
-            </label>
-          </div>
-        ))}
-      </div>
 
       <div className="flex items-center justify-between text-sm text-muted-foreground">
         <span>
