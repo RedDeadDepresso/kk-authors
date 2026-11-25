@@ -23,6 +23,7 @@ import type { AuthorFilters, FlagKey } from "@/hooks/use-author-filters";
 import {
   DOWNLOAD_BUTTONS,
   LINK_BUTTONS,
+  iconFor,
   type SortOption,
 } from "@/lib/authors";
 import { Fragment } from "react";
@@ -41,12 +42,15 @@ function FilterButtonRow<K extends string>({
   options,
   selected,
   onToggle,
+  getIcon,
   children,
 }: {
   heading: string;
   options: { key: K; label: string }[];
   selected: K[];
   onToggle: (key: K) => void;
+  /** Optional: returns an icon URL to show before each option's label. */
+  getIcon?: (key: K) => string;
   children?: React.ReactNode;
 }) {
   return (
@@ -61,6 +65,15 @@ function FilterButtonRow<K extends string>({
           aria-pressed={selected.includes(key)}
           onClick={() => onToggle(key)}
         >
+          {getIcon && (
+            <img
+              src={getIcon(key)}
+              alt=""
+              loading="lazy"
+              className="size-4 rounded-sm"
+              onError={(e) => (e.currentTarget.style.display = "none")}
+            />
+          )}
           {label}
         </Button>
       ))}
@@ -171,12 +184,14 @@ export function AuthorFilters({
         options={LINK_BUTTONS}
         selected={linkFilters}
         onToggle={toggleLinkFilter}
+        getIcon={iconFor}
       />
       <FilterButtonRow
         heading="Has download:"
         options={DOWNLOAD_BUTTONS}
         selected={linkFilters}
         onToggle={toggleLinkFilter}
+        getIcon={iconFor}
       >
         {linkFilters.length > 1 && (
           <Button
