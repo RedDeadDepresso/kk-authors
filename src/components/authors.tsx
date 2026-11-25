@@ -81,6 +81,7 @@ const PAGE_SIZE = 60;
 
 type LinkKey = Exclude<keyof Links, "download">;
 type DownloadKey = keyof DownloadLinks;
+type FilterKey = LinkKey | DownloadKey;
 
 // "icon" files live in public/icons/<key>.png
 const LINK_BUTTONS: { key: LinkKey; label: string }[] = [
@@ -97,6 +98,13 @@ const DOWNLOAD_BUTTONS: { key: DownloadKey; label: string }[] = [
   { key: "buzzheavier", label: "Buzzheavier" },
   { key: "fileditch", label: "Fileditch" },
 ];
+
+const DOWNLOAD_KEYS: Record<DownloadKey, true> = {
+  mega: true,
+  drive: true,
+  buzzheavier: true,
+  fileditch: true,
+};
 
 function isValidUrl(url: string | undefined): url is string {
   if (!url) return false;
@@ -482,7 +490,7 @@ export function Authors() {
   const [telegramChecked, setTelegramChecked] = useState(false);
   const [series, setSeries] = useState<string[]>([]);
   const seriesAnchor = useComboboxAnchor();
-  const [linkFilters, setLinkFilters] = useState<LinkKey[]>([]);
+  const [linkFilters, setLinkFilters] = useState<FilterKey[]>([]);
   const [linkMode, setLinkMode] = useState<"any" | "all">("any");
   const [search, setSearch] = useState("");
   const [limit, setLimit] = useState(PAGE_SIZE);
@@ -541,7 +549,10 @@ export function Authors() {
         )
           return false;
         if (linkFilters.length > 0) {
-          const has = (key: LinkKey) => isValidUrl(a.links?.[key]);
+          const has = (key: FilterKey) =>
+            key in DOWNLOAD_KEYS
+              ? isValidUrl(a.links?.download?.[key as DownloadKey])
+              : isValidUrl(a.links?.[key as LinkKey]);
           const ok =
             linkMode === "all" ? linkFilters.every(has) : linkFilters.some(has);
           if (!ok) return false;
@@ -594,7 +605,7 @@ export function Authors() {
     setLinkMode("any");
   }
 
-  function toggleLinkFilter(key: LinkKey) {
+  function toggleLinkFilter(key: FilterKey) {
     setLinkFilters((prev) =>
       prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
     );
@@ -687,6 +698,22 @@ export function Authors() {
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted-foreground">Has link:</span>
           {LINK_BUTTONS.map(({ key, label }) => (
+            <Button
+              key={key}
+              type="button"
+              size="sm"
+              variant={linkFilters.includes(key) ? "default" : "outline"}
+              aria-pressed={linkFilters.includes(key)}
+              onClick={() => toggleLinkFilter(key)}
+            >
+              {label}
+            </Button>
+          ))}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-sm text-muted-foreground">Has download:</span>
+          {DOWNLOAD_BUTTONS.map(({ key, label }) => (
             <Button
               key={key}
               type="button"
