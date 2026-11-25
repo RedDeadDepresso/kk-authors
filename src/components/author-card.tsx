@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { Download, Magnet, Star } from "lucide-react";
+import { Clapperboard, Crown, Download, Magnet, Star } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardTitle } from "@/components/ui/card";
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   DOWNLOAD_BUTTONS,
+  FLAG_ICON_CLASS,
   LINK_BUTTONS,
   SCENES_MAGNET_URL,
   TELEGRAM_URL,
@@ -62,7 +63,7 @@ function LinkButton({
       >
         {useLucide ? (
           linkKey === "scenes" ? (
-            <Magnet />
+            <Magnet className={FLAG_ICON_CLASS.archive} />
           ) : (
             <span className="text-xs font-bold">{label.charAt(0)}</span>
           )
@@ -245,10 +246,20 @@ export const AuthorCard = memo(function AuthorCard({
           <AvatarFallback>{name.charAt(0)}</AvatarFallback>
         </Avatar>
         <div className="flex flex-col">
-          <CardTitle className="font-bold text-lg">
+          <CardTitle className="font-bold text-lg flex flex-wrap items-center gap-1.5">
             {name}
-            {isRecommended && " 👑"}
-            {makesScenes && " 🎬"}
+            {isRecommended && (
+              <Crown
+                className={cn("size-5", FLAG_ICON_CLASS.recommended)}
+                aria-label="Recommended"
+              />
+            )}
+            {makesScenes && (
+              <Clapperboard
+                className={cn("size-5", FLAG_ICON_CLASS.scenes)}
+                aria-label="Makes scenes"
+              />
+            )}
           </CardTitle>
           {favorited !== undefined && (
             <span>
@@ -256,7 +267,7 @@ export const AuthorCard = memo(function AuthorCard({
             </span>
           )}
           {tags.length > 0 && (
-            <span className="text-sm text-white/80">
+            <span className="flex items-center gap-1 text-sm text-white/80">
               Telegram: {tags.join(", ")}
             </span>
           )}
@@ -275,9 +286,7 @@ export const AuthorCard = memo(function AuthorCard({
           title={isFavorite ? "Remove from favorites" : "Add to favorites"}
           onClick={() => onToggleFavorite(name)}
         >
-          <Star
-            className={cn(isFavorite && "fill-yellow-400 text-yellow-400")}
-          />
+          <Star className={cn(isFavorite && FLAG_ICON_CLASS.favorites)} />
         </Button>
       </CardContent>
       <CardFooter className="relative flex items-end gap-2 h-full">

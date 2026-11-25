@@ -22,18 +22,41 @@ import {
 import type { AuthorFilters, FlagKey } from "@/hooks/use-author-filters";
 import {
   DOWNLOAD_BUTTONS,
+  FLAG_ICON_CLASS,
   LINK_BUTTONS,
   iconFor,
   type SortOption,
 } from "@/lib/authors";
+import { Clapperboard, Crown, Hash, Magnet, Star } from "lucide-react";
 import { Fragment } from "react";
 
-const FLAG_BUTTONS: { key: FlagKey; label: string }[] = [
-  { key: "favorites", label: "⭐ Favorites" },
-  { key: "recommended", label: "👑 Recommended" },
-  { key: "scenes", label: "🎬 Makes scenes" },
-  { key: "archive", label: "🧲 In scene archive" },
-  { key: "telegram", label: "#️⃣ Telegram tag" },
+// Icons use colors matching the emoji they replace
+const FLAG_BUTTONS: { key: FlagKey; label: string; icon: React.ReactNode }[] = [
+  {
+    key: "favorites",
+    label: "Favorites",
+    icon: <Star className={FLAG_ICON_CLASS.favorites} />,
+  },
+  {
+    key: "recommended",
+    label: "Recommended",
+    icon: <Crown className={FLAG_ICON_CLASS.recommended} />,
+  },
+  {
+    key: "scenes",
+    label: "Makes scenes",
+    icon: <Clapperboard className={FLAG_ICON_CLASS.scenes} />,
+  },
+  {
+    key: "archive",
+    label: "In scene archive",
+    icon: <Magnet className={FLAG_ICON_CLASS.archive} />,
+  },
+  {
+    key: "telegram",
+    label: "Telegram tag",
+    icon: <Hash className={FLAG_ICON_CLASS.telegram} />,
+  },
 ];
 
 /** A row of toggle buttons ("Has link:", "Has download:", "Show only:"). */
@@ -46,7 +69,7 @@ function FilterButtonRow<K extends string>({
   children,
 }: {
   heading: string;
-  options: { key: K; label: string }[];
+  options: { key: K; label: string; icon?: React.ReactNode }[];
   selected: K[];
   onToggle: (key: K) => void;
   /** Optional: returns an icon URL to show before each option's label. */
@@ -56,7 +79,7 @@ function FilterButtonRow<K extends string>({
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="text-sm text-muted-foreground">{heading}</span>
-      {options.map(({ key, label }) => (
+      {options.map(({ key, label, icon }) => (
         <Button
           key={key}
           type="button"
@@ -65,6 +88,7 @@ function FilterButtonRow<K extends string>({
           aria-pressed={selected.includes(key)}
           onClick={() => onToggle(key)}
         >
+          {icon}
           {getIcon && (
             <img
               src={getIcon(key)}

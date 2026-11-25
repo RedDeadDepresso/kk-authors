@@ -103,3 +103,12 @@ export const SCENES_MAGNET_URL =
 export function iconFor(key: ButtonKey | DownloadKey): string {
   return `${import.meta.env.BASE_URL}icons/${key}.png`;
 }
+
+/** Tailwind color classes for the flag icons, shared by the filters and the author cards. */
+export const FLAG_ICON_CLASS = {
+  favorites: "text-yellow-400 fill-yellow-400",
+  recommended: "text-amber-500 fill-amber-500",
+  scenes: "text-purple-300",
+  archive: "",
+  telegram: "text-sky-500",
+} as const;
