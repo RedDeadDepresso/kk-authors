@@ -19,7 +19,7 @@ import { ModeToggle } from "@/components/mode-toggle";
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState<boolean>(false);
-  const GITHUB_USERNAME = "RedDeadDepresso";
+  const GITHUB_URL = "https://github.com/RedDeadDepresso/kk-authors";
 
   return (
     <header className="border-b top-0 z-40 w-full bg-white dark:border-b-slate-700 dark:bg-background">
@@ -68,7 +68,7 @@ export function Navbar() {
                 <nav className="flex flex-col justify-center items-center gap-2 mt-4">
                   <a
                     rel="noreferrer noopener"
-                    href={`https://github.com/${GITHUB_USERNAME}`}
+                    href={GITHUB_URL}
                     target="_blank"
                     className={`w-27.5 border ${buttonVariants({
                       variant: "outline",
@@ -88,7 +88,7 @@ export function Navbar() {
           <div className="hidden md:flex gap-2">
             <a
               rel="noreferrer noopener"
-              href={`https://github.com/${GITHUB_USERNAME}`}
+              href={GITHUB_URL}
               target="_blank"
               className={`border ${buttonVariants({ variant: "outline" })}`}
             >
