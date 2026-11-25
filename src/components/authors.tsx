@@ -43,9 +43,16 @@ import {
   useState,
 } from "react";
 
+interface DownloadLinks {
+  mega: string;
+  drive: string;
+  buzzheavier: string;
+  fileditch: string;
+}
+
 interface Links {
   pixiv: string;
-  download: string;
+  download: DownloadLinks;
   pawchive: string;
   bepis: string;
   koikatsucards: string;
@@ -57,6 +64,7 @@ interface Author {
   series: string[];
   isRecommended: boolean;
   makesScenes: boolean;
+  inSceneArchive: boolean;
   favorited: number;
   telegram: string[];
   icon: string;
@@ -71,14 +79,23 @@ const AUTHORS_URL =
 
 const PAGE_SIZE = 60;
 
-type LinkKey = keyof Links;
+type LinkKey = Exclude<keyof Links, "download">;
+type DownloadKey = keyof DownloadLinks;
 
-// "icon" files live in public/icons/<key>.png; download uses a lucide icon
+// "icon" files live in public/icons/<key>.png
 const LINK_BUTTONS: { key: LinkKey; label: string }[] = [
   { key: "pixiv", label: "Pixiv" },
   { key: "koikatsucards", label: "KoikatsuCards" },
   { key: "bepis", label: "Bepis" },
   { key: "pawchive", label: "Pawchive" },
+];
+
+// Download hosts, in display order; icons live in public/icons/<key>.png
+const DOWNLOAD_BUTTONS: { key: DownloadKey; label: string }[] = [
+  { key: "mega", label: "Mega" },
+  { key: "drive", label: "Google Drive" },
+  { key: "buzzheavier", label: "Buzzheavier" },
+  { key: "fileditch", label: "Fileditch" },
 ];
 
 function isValidUrl(url: string | undefined): url is string {
@@ -112,13 +129,13 @@ function telegramTags(value: string[]): string[] {
   return [...new Set((value ?? []).map((t) => t.trim()).filter(Boolean))];
 }
 
-// Pepper's Scene Archive torrent, shown for authors with makesScenes = true
+// Pepper's Scene Archive torrent, shown for authors with inSceneArchive = true
 const SCENES_MAGNET_URL =
   "magnet:?xt=urn:btih:9c8e8b96c3c55322b15310f37dd80cb40f5d274d&dn=Pepper%27s_Scene_Archive&xl=793193494300";
 
 type ButtonKey = LinkKey | "kknow" | "telegram" | "scenes";
 
-function iconFor(key: ButtonKey): string {
+function iconFor(key: ButtonKey | DownloadKey): string {
   return `${import.meta.env.BASE_URL}icons/${key}.png`;
 }
 
@@ -141,8 +158,7 @@ function LinkButton({
 }) {
   const [iconFailed, setIconFailed] = useState(false);
   const isMagnet = href.startsWith("magnet:");
-  const useLucide =
-    linkKey === "download" || linkKey === "scenes" || iconFailed;
+  const useLucide = linkKey === "scenes" || iconFailed;
 
   return (
     <Button
@@ -159,9 +175,7 @@ function LinkButton({
         {...(telegramQuery ? { "data-kkafio-telegram": telegramQuery } : {})}
       >
         {useLucide ? (
-          linkKey === "download" ? (
-            <Download />
-          ) : linkKey === "scenes" ? (
+          linkKey === "scenes" ? (
             <Magnet />
           ) : (
             <span className="text-xs font-bold">{label.charAt(0)}</span>
@@ -222,6 +236,74 @@ function TelegramTagsMenu({ author, tags }: { author: string; tags: string[] }) 
   );
 }
 
+// One Download button. A single host opens its page directly; several hosts
+// open a menu (like the Telegram tags), one entry per host.
+function DownloadButton({
+  author,
+  downloads,
+}: {
+  author: string;
+  downloads: { key: DownloadKey; label: string; href: string }[];
+}) {
+  if (downloads.length === 0) return null;
+
+  if (downloads.length === 1) {
+    const [{ label, href }] = downloads;
+    return (
+      <Button
+        asChild
+        variant="ghost"
+        size="icon"
+        title={`Download ${author} from ${label}`}
+      >
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Download ${author} from ${label}`}
+        >
+          <Download />
+        </a>
+      </Button>
+    );
+  }
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="relative"
+          title={`${downloads.length} download links`}
+          aria-label={`Download ${author}`}
+        >
+          <Download />
+          <span className="absolute -top-0.5 -right-0.5 rounded-full bg-primary px-1 text-[10px] font-bold leading-4 text-primary-foreground">
+            {downloads.length}
+          </span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuLabel>Download</DropdownMenuLabel>
+        {downloads.map(({ key, label, href }) => (
+          <DropdownMenuItem key={key} asChild>
+            <a href={href} target="_blank" rel="noopener noreferrer">
+              <img
+                src={iconFor(key)}
+                alt=""
+                className="size-4 rounded-sm"
+                onError={(e) => (e.currentTarget.style.display = "none")}
+              />
+              {label}
+            </a>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 // Floating "back to top" button, shown once the page is scrolled down a bit.
 function BackToTop() {
   const [visible, setVisible] = useState(false);
@@ -258,6 +340,7 @@ const AuthorCard = memo(function AuthorCard({
   banner,
   links,
   makesScenes,
+  inSceneArchive,
   isFavorite,
   onToggleFavorite,
 }: {
@@ -273,8 +356,13 @@ const AuthorCard = memo(function AuthorCard({
   | "banner"
   | "links"
   | "makesScenes"
+  | "inSceneArchive"
 >) {
   const available = LINK_BUTTONS.filter(({ key }) => isValidUrl(links?.[key]));
+  const downloads = DOWNLOAD_BUTTONS.flatMap(({ key, label }) => {
+    const href = links?.download?.[key];
+    return isValidUrl(href) ? [{ key, label, href }] : [];
+  });
   const tags = telegramTags(telegram).filter((t) => t !== name);
   return (
     <Card
@@ -368,7 +456,7 @@ const AuthorCard = memo(function AuthorCard({
           />
         )}
         {tags.length > 1 && <TelegramTagsMenu author={name} tags={tags} />}
-        {makesScenes && (
+        {inSceneArchive && (
           <LinkButton
             linkKey="scenes"
             href={SCENES_MAGNET_URL}
@@ -376,14 +464,7 @@ const AuthorCard = memo(function AuthorCard({
             author={name}
           />
         )}
-        {links.download && (
-          <LinkButton
-            linkKey="download"
-            href={links.download}
-            label="Download"
-            author={name}
-          />
-        )}
+        <DownloadButton author={name} downloads={downloads} />
       </CardFooter>
     </Card>
   );
